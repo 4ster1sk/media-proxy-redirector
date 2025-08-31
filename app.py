@@ -84,6 +84,86 @@ def is_allowed_domain(url: str) -> bool:
         
     return False
 
+def is_federated_domain(url: str) -> bool:
+    """
+    URLのホストが連合しているかDBで確認する(完全一致)。
+    """
+    conn = None
+    try:
+        parsed_url = urllib.parse.urlparse(url)
+        host = parsed_url.netloc.lower()
+        if not host:
+            return False
+
+        conn = psycopg2.connect(
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            host=DB_HOST,
+            port=DB_PORT
+        )
+        cur = conn.cursor()
+        
+        # 完全一致するホストが存在するか確認
+        sql_query = "SELECT host FROM instance WHERE host = %s;"
+        params = (host,)
+        cur.execute(sql_query, params)
+        
+        # fetchone() を使ってレコードが存在するかどうかを確認
+        result = cur.fetchone()
+        
+        # レコードが存在すればTrue
+        if result:
+            return True
+
+    except Exception as e:
+        print(f"An error occurred while checking federated domain: {e}")
+        return False
+    finally:
+        if conn:
+            cur.close()
+            conn.close()
+            
+    return False
+
+def is_used_as_avatar(url: str) -> bool:
+    """
+    URLがアバターとして使用されているかDBで確認する(完全一致)。
+    """
+    conn = None
+    try:
+        if not url:
+            return False
+
+        conn = psycopg2.connect(
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            host=DB_HOST,
+            port=DB_PORT
+        )
+        cur = conn.cursor()
+        
+        # "user"テーブルの"avatarUrl"カラムにURLが存在するか確認
+        sql_query = 'SELECT "avatarUrl" FROM "user" WHERE "avatarUrl" = %s;'
+        params = (url,)
+        cur.execute(sql_query, params)
+        
+        result = cur.fetchone()
+        
+        if result:
+            return True
+
+    except Exception as e:
+        print(f"An error occurred while checking avatar URL: {e}")
+        return False
+    finally:
+        if conn:
+            cur.close()
+            conn.close()
+            
+    return False
+
 # 任意のパスを受け取るエンドポイント
 @app.get("/{path:path}")
 async def redirect_media_url(
@@ -95,7 +175,7 @@ async def redirect_media_url(
     # 1. urlが与えられた場合の処理
     if url:
         url = urllib.parse.unquote(url)
-        if is_allowed_domain(url):
+        if is_allowed_domain(url) or is_federated_domain(url) or is_used_as_avatar(url):
             return RedirectResponse(url=url, status_code=302)
 
     # 2. customEmojiNameが与えられた場合の処理
