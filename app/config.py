@@ -23,4 +23,5 @@ SQLALCHEMY_DATABASE_URL = (
 
 IS_ALLOW_SENSITIVE_FILE: bool = bool(os.getenv("IS_ALLOW_SENSITIVE_FILE", False))
 IS_ALLOW_REMOTE_FILE: bool = bool(os.getenv("IS_ALLOW_REMOTE_FILE", False))
+IS_ALLOW_FEDERATED_DOMAIN: bool = bool(os.getenv("IS_ALLOW_FEDERATED_DOMAIN", False))
 ALLOWED_DOMAINS: list[str] = os.getenv("ALLOWED_DOMAINS", "").split(",")

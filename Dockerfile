@@ -6,8 +6,6 @@ ARG GID="1000"
 # 作業ディレクトリを /app に設定
 WORKDIR /app
 
-# プロジェクトに必要なファイルをコピー
-COPY app ./app
 COPY requirements.txt .
 
 # 依存関係をインストール
@@ -18,6 +16,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN groupadd -g "${GID}" user \
     && useradd -l -u "${UID}" -g "${GID}" -m -s /bin/bash user
+
+COPY app ./app
 
 USER user
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 3000 --workers ${WORKERS:-5}"]

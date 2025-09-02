@@ -1,6 +1,7 @@
 from app.config import (
     IS_ALLOW_SENSITIVE_FILE,
     IS_ALLOW_REMOTE_FILE,
+    IS_ALLOW_FEDERATED_DOMAIN,
     ALLOWED_DOMAINS,
 )
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -11,6 +12,7 @@ from urllib.parse import urlparse
 from app.database import get_db
 from app.model.db.drive_file import DriveFile
 from app.model.db.emoji import Emoji
+from app.model.db.instance import MiInstance
 from app.exception import (
     SensitiveFileNotAllowedException,
     RemoteFileNotAllowedException,
@@ -35,6 +37,23 @@ def is_allowed_domain(url: str) -> bool:
             "." + normalized_allowed_domain
         ):
             return True
+
+    return False
+
+
+def is_federated_domain(url: str, db: Session) -> bool:
+    """
+    URLのホストが連合しているかDBで確認する(完全一致)。
+    """
+    parsed_url = urlparse(url)
+    host = parsed_url.netloc.lower()
+
+    if not host:
+        return False
+
+    result = db.query(MiInstance).filter(MiInstance.host == host).first()
+    if result:
+        return True
 
     return False
 
@@ -78,6 +97,10 @@ async def proxy_any(proxy_path: str, request: Request, db: Session = Depends(get
     try:
         if is_allowed_domain(url):
             return RedirectResponse(url=url, status_code=302)
+
+        elif IS_ALLOW_FEDERATED_DOMAIN and is_federated_domain(url, db):
+            return RedirectResponse(url=url, status_code=302)
+
         elif (
             proxy_path in ["emoji.webp", "image.webp", "static.webp", "avatar.webp"]
         ) and is_exist_emoji(url, db):
@@ -86,7 +109,8 @@ async def proxy_any(proxy_path: str, request: Request, db: Session = Depends(get
         raise HTTPException(
             status_code=403, detail="Forbidden domain or recursive proxy redirect"
         )
-    except Exception:
+    except Exception as e:
+        print(e)
         raise HTTPException(status_code=500)
 
 
