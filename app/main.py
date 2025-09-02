@@ -58,7 +58,7 @@ def is_federated_domain(url: str, db: Session) -> bool:
     return False
 
 
-def is_exist_emoji(url: str, db: Session) -> bool:
+def emoji_exists(url: str, db: Session) -> bool:
     parsed = urlparse(url)
     emoji = db.query(Emoji).filter(Emoji.publicUrl == parsed.geturl()).first()
     if emoji:
@@ -85,6 +85,20 @@ def get_file(web_public_access_key: str, db: Session) -> str | None:
     return None
 
 
+def file_exists_from_url(url: str, db: Session) -> bool:
+    file = db.query(DriveFile).filter(DriveFile.uri == url).first()
+
+    if file:
+        if (file.isSensitive) and (not IS_ALLOW_SENSITIVE_FILE):
+            raise SensitiveFileNotAllowedException()
+
+        if (file.userHost is not None) and (not IS_ALLOW_REMOTE_FILE):
+            raise RemoteFileNotAllowedException()
+
+        return True
+    return False
+
+
 @app.get("/proxy/{proxy_path:path}")
 async def proxy_any(proxy_path: str, request: Request, db: Session = Depends(get_db)):
     print("=== proxy_path:", proxy_path)
@@ -101,10 +115,9 @@ async def proxy_any(proxy_path: str, request: Request, db: Session = Depends(get
         elif IS_ALLOW_FEDERATED_DOMAIN and is_federated_domain(url, db):
             return RedirectResponse(url=url, status_code=302)
 
-        elif (
-            proxy_path in ["emoji.webp", "image.webp", "static.webp", "avatar.webp"]
-        ) and is_exist_emoji(url, db):
-            return RedirectResponse(url=url, status_code=302)
+        elif proxy_path in ["emoji.webp", "image.webp", "static.webp", "avatar.webp"]:
+            if (emoji_exists(url, db)) or (file_exists_from_url(url, db)):
+                return RedirectResponse(url=url, status_code=302)
 
         raise HTTPException(
             status_code=403, detail="Forbidden domain or recursive proxy redirect"
