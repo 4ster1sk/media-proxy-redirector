@@ -15,10 +15,10 @@ from .base import Base
 
 
 class SuspensionState(str, enum.Enum):
-    NONE = "none"
-    MANUALLY_SUSPENDED = "manuallySuspended"
-    GONE_SUSPENDED = "goneSuspended"
-    AUTO_SUSPENDED_FOR_NOT_RESPONDING = "autoSuspendedForNotResponding"
+    none = "none"
+    manuallySuspended = "manuallySuspended"
+    goneSuspended = "goneSuspended"
+    autoSuspendedForNotResponding = "autoSuspendedForNotResponding"
 
 
 class MiInstance(Base):
@@ -97,7 +97,7 @@ class MiInstance(Base):
         EnumType(
             SuspensionState, native_enum=False
         ),  # native_enum=FalseでVARCHARとして扱う
-        default=SuspensionState.NONE,
+        default=SuspensionState.none,
         index=True,
     )
 

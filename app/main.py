@@ -122,6 +122,8 @@ async def proxy_any(proxy_path: str, request: Request, db: Session = Depends(get
         raise HTTPException(
             status_code=403, detail="Forbidden domain or recursive proxy redirect"
         )
+    except HTTPException as e:
+        raise e
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500)
@@ -146,6 +148,8 @@ async def proxy_files(
         raise HTTPException(
             status_code=403, detail="Remote file access is not allowed."
         )
+    except HTTPException as e:
+        raise e
     except Exception:
         raise HTTPException(status_code=500)
 
