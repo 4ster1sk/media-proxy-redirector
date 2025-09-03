@@ -58,6 +58,15 @@ def is_federated_domain(url: str, db: Session) -> bool:
     return False
 
 
+def instance_icon_exists(url: str, db: Session) -> bool:
+    parsed = urlparse(url)
+    result = db.query(MiInstance).filter(MiInstance.faviconUrl == parsed.geturl()).first()
+    if result:
+        return True
+
+    return False
+
+
 def emoji_exists(url: str, db: Session) -> bool:
     parsed = urlparse(url)
     emoji = db.query(Emoji).filter(Emoji.publicUrl == parsed.geturl()).first()
@@ -106,6 +115,10 @@ async def proxy_any(proxy_path: str, request: Request, db: Session = Depends(get
         raise HTTPException(
             status_code=403, detail="'url' query parameter is required"
         )
+    if proxy_path not in ["emoji.webp", "image.webp", "static.webp", "avatar.webp"]:
+        raise HTTPException(
+            status_code=403, detail="Access forbidden"
+        )
 
     url = request.query_params.get("url", "")
     try:
@@ -115,8 +128,7 @@ async def proxy_any(proxy_path: str, request: Request, db: Session = Depends(get
         elif IS_ALLOW_FEDERATED_DOMAIN and is_federated_domain(url, db):
             return RedirectResponse(url=url, status_code=302)
 
-        elif proxy_path in ["emoji.webp", "image.webp", "static.webp", "avatar.webp"]:
-            if (emoji_exists(url, db)) or (file_exists_from_url(url, db)):
+        elif emoji_exists(url, db) or instance_icon_exists(url,db) or file_exists_from_url(url, db):
                 return RedirectResponse(url=url, status_code=302)
 
         raise HTTPException(
