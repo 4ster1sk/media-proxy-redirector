@@ -20,4 +20,4 @@ RUN groupadd -g "${GID}" user \
 COPY app ./app
 
 USER user
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 3000 --workers ${WORKERS:-5}"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 3000 --uds /tmp/uvicorn.sock --workers ${WORKERS:-5} "]

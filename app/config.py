@@ -26,9 +26,17 @@ DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME")
 
-SQLALCHEMY_DATABASE_URL = (
-    f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
-)
+if DB_HOST.startswith("unix:"):
+    socket_dir = DB_HOST.removeprefix("unix:")
+    SQLALCHEMY_DATABASE_URL = (
+        f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@/{DB_NAME}"
+        f"?host={socket_dir}"
+    )
+
+else:
+    SQLALCHEMY_DATABASE_URL = (
+        f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
+    )
 
 IS_ALLOW_SENSITIVE_FILE: bool = getenv_bool("IS_ALLOW_SENSITIVE_FILE", False)
 IS_ALLOW_REMOTE_FILE: bool = getenv_bool("IS_ALLOW_REMOTE_FILE", False)
