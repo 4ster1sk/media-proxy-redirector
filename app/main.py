@@ -115,7 +115,7 @@ async def proxy_any(proxy_path: str, request: Request, db: Session = Depends(get
         raise HTTPException(
             status_code=403, detail="'url' query parameter is required"
         )
-    if proxy_path not in ["emoji.webp", "image.webp", "static.webp", "avatar.webp"]:
+    if proxy_path not in ["emoji.webp", "image.webp", "static.webp", "avatar.webp", "preview.webp"]:
         raise HTTPException(
             status_code=403, detail="Access forbidden"
         )
