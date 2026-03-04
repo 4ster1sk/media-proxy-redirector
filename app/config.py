@@ -25,6 +25,7 @@ DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME")
+MEDIA_PROXY_PATH = os.getenv("MEDIA_PROXY_PATH")
 
 if DB_HOST.startswith("unix:"):
     socket_dir = DB_HOST.removeprefix("unix:")

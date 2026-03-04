@@ -3,13 +3,14 @@ from app.config import (
     IS_ALLOW_REMOTE_FILE,
     IS_ALLOW_FEDERATED_DOMAIN,
     ALLOWED_DOMAINS,
+    MEDIA_PROXY_PATH,
 )
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi.datastructures import QueryParams
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
-from fastapi.responses import RedirectResponse
 
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 from app.database import get_db
 from app.model.db.drive_file import DriveFile
 from app.model.db.emoji import Emoji
@@ -20,6 +21,7 @@ from app.exception import (
 )
 
 app = FastAPI()
+ALLOWED_QUERY_PARAMS = {"url", "static", "emoji", "avatar", "preview", "badge", "fallback"}
 
 
 def is_allowed_domain(url: str) -> bool:
@@ -112,6 +114,13 @@ def file_exists_from_url(url: str, db: Session) -> bool:
         return True
     return False
 
+def redirect_response(url:str, param: QueryParams) -> Response:
+    params = {"url": url} | {k: v for k, v in param.items() if k in ALLOWED_QUERY_PARAMS}
+    query_string = urlencode(params)
+    response = Response(content="OK", media_type="text/plain")
+    response.headers["X-Accel-Redirect"] = f"/{MEDIA_PROXY_PATH}/?{query_string}"
+    
+    return response
 
 @app.get("/proxy/{proxy_path:path}")
 async def proxy_any(proxy_path: str, request: Request, db: Session = Depends(get_db)):
@@ -128,13 +137,13 @@ async def proxy_any(proxy_path: str, request: Request, db: Session = Depends(get
     url = request.query_params.get("url", "")
     try:
         if is_allowed_domain(url):
-            return RedirectResponse(url=url, status_code=302)
+            return redirect_response(url, request.query_params)
 
         elif IS_ALLOW_FEDERATED_DOMAIN and is_federated_domain(url, db):
-            return RedirectResponse(url=url, status_code=302)
+            return redirect_response(url, request.query_params)
 
         elif emoji_exists(url, db) or instance_icon_exists(url,db) or file_exists_from_url(url, db):
-                return RedirectResponse(url=url, status_code=302)
+            return redirect_response(url, request.query_params)
 
         raise HTTPException(
             status_code=403, detail="Forbidden domain or recursive proxy redirect"
@@ -155,7 +164,7 @@ async def proxy_files(
     try:
         path = get_file(web_public_access_key, db)
         if path:
-            return RedirectResponse(url=path, status_code=302)
+            return redirect_response(path, request.query_params)
 
     except SensitiveFileNotAllowedException:
         raise HTTPException(
