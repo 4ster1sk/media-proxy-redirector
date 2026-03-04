@@ -60,7 +60,11 @@ def is_federated_domain(url: str, db: Session) -> bool:
 
 def instance_icon_exists(url: str, db: Session) -> bool:
     parsed = urlparse(url)
-    result = db.query(MiInstance).filter(MiInstance.faviconUrl == parsed.geturl()).first()
+    result = db.query(MiInstance).
+    or_(
+        MiInstance.faviconUrl == parsed.geturl(),
+        MiInstance.iconUrl == parsed.geturl()
+    ).first()
     if result:
         return True
 
