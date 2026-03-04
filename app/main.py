@@ -5,6 +5,7 @@ from app.config import (
     ALLOWED_DOMAINS,
 )
 from fastapi import Depends, FastAPI, HTTPException, Request
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from fastapi.responses import RedirectResponse
 
