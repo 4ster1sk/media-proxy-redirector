@@ -2,6 +2,7 @@ import os
 import sys
 import pathlib
 from dotenv import load_dotenv
+from sqlalchemy.engine import URL
 
 
 def getenv_bool(key: str, default: bool):
@@ -27,16 +28,25 @@ DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME")
 MEDIA_PROXY_PATH = os.getenv("MEDIA_PROXY_PATH")
 
+# URL.create() でユーザー名・パスワードを自動エスケープする
+# (f-string で組み立てると "@" や "%XX" を含むパスワードが壊れる)
 if DB_HOST.startswith("unix:"):
-    socket_dir = DB_HOST.removeprefix("unix:")
-    SQLALCHEMY_DATABASE_URL = (
-        f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@/{DB_NAME}"
-        f"?host={socket_dir}"
+    SQLALCHEMY_DATABASE_URL = URL.create(
+        "postgresql+psycopg2",
+        username=DB_USER,
+        password=DB_PASSWORD,
+        database=DB_NAME,
+        query={"host": DB_HOST.removeprefix("unix:"), "port": DB_PORT},
     )
 
 else:
-    SQLALCHEMY_DATABASE_URL = (
-        f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
+    SQLALCHEMY_DATABASE_URL = URL.create(
+        "postgresql+psycopg2",
+        username=DB_USER,
+        password=DB_PASSWORD,
+        host=DB_HOST,
+        port=int(DB_PORT),
+        database=DB_NAME,
     )
 
 IS_ALLOW_SENSITIVE_FILE: bool = getenv_bool("IS_ALLOW_SENSITIVE_FILE", False)
