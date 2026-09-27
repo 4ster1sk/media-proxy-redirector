@@ -28,13 +28,27 @@ def is_allowed_domain(url: str) -> bool:
     """
     URLのホストが許可されたドメインまたはそのサブドメインに含まれているかを確認する。
     """
+    # media-proxy 側 (WHATWG URL) は "\" を "/" として扱うため、
+    # Python の urlparse とホストの解釈がずれる。"\" や空白・制御文字を含む URL は弾く
+    if any(c == "\\" or c.isspace() or not c.isprintable() for c in url):
+        return False
+
     parsed_url = urlparse(url)
-    host = parsed_url.netloc.lower()
+    if parsed_url.scheme.lower() not in ("http", "https"):
+        return False
+
+    # netloc はユーザー情報やポートを含むので hostname で判定する
+    host = parsed_url.hostname
+    if not host:
+        return False
 
     # 許可されたドメインのリストをチェック
     for allowed_domain in ALLOWED_DOMAINS:
         # 許可されたドメインも正規化
-        normalized_allowed_domain = allowed_domain.lower()
+        normalized_allowed_domain = allowed_domain.strip().lower()
+        # 空要素 (ALLOWED_DOMAINS 未設定時など) は "." 終わりのホストに誤マッチするので無視
+        if not normalized_allowed_domain:
+            continue
         # ドメインが完全に一致するか、またはサブドメインであるかを確認
         if host == normalized_allowed_domain or host.endswith(
             "." + normalized_allowed_domain
